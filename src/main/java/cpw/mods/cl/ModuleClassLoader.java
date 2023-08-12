@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.module.*;
+import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -28,6 +29,13 @@ public class ModuleClassLoader extends ClassLoader {
     private final Map<String, ResolvedModule> packageLookup;
     private final Map<String, ClassLoader> parentLoaders;
     private ClassLoader fallbackClassLoader = ClassLoader.getPlatformClassLoader();
+
+    private List<ClassLoader> child = new ArrayList<ClassLoader>();
+
+    public void addChild(ClassLoader child)
+    {
+        this.child.add(child);
+    }
 
     public ModuleClassLoader(final String name, final Configuration configuration, final List<ModuleLayer> parentLayers) {
         super(name, null);
@@ -138,6 +146,26 @@ public class ModuleClassLoader extends ClassLoader {
                     }
                 }
             }
+            // Mohist start - Allows us to use the PluginClassLoader to find the plugin's class
+            if (c == null) {
+                if (!child.isEmpty()) {
+                    for (ClassLoader child : child) {
+                        try {
+                            Method find = child.getClass().getDeclaredMethod("findClass", String.class);
+                            find.setAccessible(true);
+                            Class<?> classe = (Class<?>) find.invoke(child, name);
+                            if (classe != null)
+                            {
+                                return classe;
+                            }
+                        }catch(Exception e1)
+                        {
+                            e1.printStackTrace();
+                        }
+                    }
+                }
+            }
+            // Mohist end
             if (c == null) throw new ClassNotFoundException(name);
             if (resolve) resolveClass(c);
             return c;

@@ -4,6 +4,7 @@ import java.io.*;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.FileChannel;
@@ -48,9 +49,13 @@ public class UnionFileSystem extends FileSystem {
 
     static {
         try {
-            var hackfield = MethodHandles.Lookup.class.getDeclaredField("IMPL_LOOKUP");
-            hackfield.setAccessible(true);
-            MethodHandles.Lookup hack = (MethodHandles.Lookup) hackfield.get(null);
+            Field theUnsafe = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+            theUnsafe.setAccessible(true);
+            sun.misc.Unsafe unsafe = (sun.misc.Unsafe) theUnsafe.get(null);
+            Field field = MethodHandles.Lookup.class.getDeclaredField("IMPL_LOOKUP");
+            Object base = unsafe.staticFieldBase(field);
+            long offset = unsafe.staticFieldOffset(field);
+            MethodHandles.Lookup hack = (MethodHandles.Lookup) unsafe.getObject(base, offset);
 
             var clz = Class.forName("jdk.nio.zipfs.ZipPath");
             ZIPFS_EXISTS = hack.findSpecial(clz, "exists", MethodType.methodType(boolean.class), clz);

@@ -21,7 +21,7 @@ allprojects {
         toolchain.languageVersion = JavaLanguageVersion.of(16)
         modularity.inferModulePath.set(true)
     }
-    version = gradleutils.getTagOffsetVersion()
+    version = 'mohist-2.1.11'
 
     repositories {
         mavenLocal()
@@ -112,10 +112,10 @@ compileTestJava {
 
 group = 'cpw.mods'
 
-version = gradleutils.getTagOffsetVersion()
+version = 'mohist-2.1.11'
 logger.lifecycle('Version: ' + version)
 
-ext.asmVersion = 9.3
+ext.asmVersion = 9.5
 dependencies {
     api("org.ow2.asm:asm:${asmVersion}")
     api("org.ow2.asm:asm-tree:${asmVersion}")
@@ -133,21 +133,6 @@ task sourcesJar(type: Jar) {
     from sourceSets.main.allSource
 }
 
-//jmh {
-//    benchmarkMode = ['avgt' ]
-//    profilers = [ 'stack', 'jfr:dir=./build/results/jmh/' ]
-//    timeOnIteration = '3s'
-//    warmup = '2s'
-//    warmupIterations = 3
-//    iterations = 3
-//    fork = 3
-//    timeUnit = 'us'
-//    // JMH loads the main sourceset without a module context, so add exports and opens for required stuff to all unnamed and disable the missing module crash
-//    jvmArgsPrepend = ['--add-opens java.base/java.util.jar=ALL-UNNAMED --add-exports java.base/sun.security.util=ALL-UNNAMED -Dsecurejarhandler.throwOnMissingModule=false']
-//}
-
-//tasks['jmh'].dependsOn(clean)
-
 jar {
     manifest {
         attributes(
@@ -155,12 +140,12 @@ jar {
                 'Specification-Vendor': 'neoforged',
                 'Specification-Version': '1', // We are version 1 of ourselves
                 'Implementation-Title': project.name,
-                'Implementation-Version': "${project.version}+${System.getenv('BUILD_NUMBER')?:0}+${gradleutils.gitInfo.branch}.${gradleutils.gitInfo.abbreviatedId}",
+                'Implementation-Version': project.version,
                 'Implementation-Vendor':'neoforged',
                 'Implementation-Timestamp': java.time.Instant.now().toString(),
                 'Git-Commit': gradleutils.gitInfo.abbreviatedId,
                 'Git-Branch': gradleutils.gitInfo.branch,
-                'Build-Number': "${System.getenv("BUILD_NUMBER")?:0}",
+                'Build-Number': project.version,
         )
     }
 }
@@ -175,30 +160,15 @@ publishing {
         mavenJava(MavenPublication) {
             from components.java
             artifact sourcesJar
-            pom {
-                name = 'Secure Modular Jar handler'
-                description = 'Making the Java modular system provide security information'
-                url = 'https://github.com/McModLauncher/securejarhandler'
-                scm {
-                    url = 'https://github.com/McModLauncher/securejarhandler'
-                    connection = 'scm:git:git://github.com/McModLauncher/securejarhandler.git'
-                    developerConnection = 'scm:git:git@github.com:McModLauncher/securejarhandler.git'
-                }
-                issueManagement {
-                    system = 'github'
-                    url = 'https://github.com/McModLauncher/securejarhandler/issues'
-                }
-
-                developers {
-                    developer {
-                        id = 'cpw'
-                        name = 'cpw'
-                    }
-                }
-            }
         }
     }
+
     repositories {
-        maven gradleutils.getPublishingForgeMaven()
+        mavenLocal()
+
+        maven {
+            name = "Mohist-Maven"
+            setUrl("file:/Mohist-Maven/maven/")
+        }
     }
 }
