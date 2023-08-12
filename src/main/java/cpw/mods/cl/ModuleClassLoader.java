@@ -135,42 +135,52 @@ public class ModuleClassLoader extends ClassLoader {
     protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
         synchronized (getClassLoadingLock(name)) {
             var c = findLoadedClass(name);
-            if (c == null) {
-                var index = name.lastIndexOf('.');
-                if (index >= 0) {
-                    final var pname = name.substring(0, index);
-                    if (this.packageLookup.containsKey(pname)) {
-                        c = findClass(this.packageLookup.get(pname).name(), name);
-                    } else {
-                        c = this.parentLoaders.getOrDefault(pname, fallbackClassLoader).loadClass(name);
-                    }
-                }
-            }
-            // Mohist start - Allows us to use the PluginClassLoader to find the plugin's class
-            if (c == null) {
-                if (!child.isEmpty()) {
-                    for (ClassLoader child : child) {
-                        try {
-                            Method find = child.getClass().getDeclaredMethod("findClass", String.class);
-                            find.setAccessible(true);
-                            Class<?> classe = (Class<?>) find.invoke(child, name);
-                            if (classe != null)
-                            {
-                                return classe;
-                            }
-                        }catch(Exception e1)
-                        {
-                            // e1.printStackTrace();
+            try {
+                if (c == null) {
+                    var index = name.lastIndexOf('.');
+                    if (index >= 0) {
+                        final var pname = name.substring(0, index);
+                        if (this.packageLookup.containsKey(pname)) {
+                            c = findClass(this.packageLookup.get(pname).name(), name);
+                        } else {
+                            c = this.parentLoaders.getOrDefault(pname, fallbackClassLoader).loadClass(name);
                         }
                     }
                 }
+
+                Class<?> classe = getaClass(name, c);
+                if (classe != null) return classe;
+            } catch (Throwable e) {
+                Class<?> classe = getaClass(name, c);
+                if (classe != null) return classe;
             }
-            // Mohist end
             if (c == null) throw new ClassNotFoundException(name);
             if (resolve) resolveClass(c);
             return c;
         }
     }
+
+    // Mohist start - Allows us to use the PluginClassLoader to find the plugin's class
+    private Class<?> getaClass(String name, Class<?> c) {
+        if (c == null) {
+            if (!child.isEmpty()) {
+                for (ClassLoader child : child) {
+                    try {
+                        Method find = child.getClass().getDeclaredMethod("findClass", String.class);
+                        find.setAccessible(true);
+                        Class<?> classe = (Class<?>) find.invoke(child, name);
+                        if (classe != null) {
+                            return classe;
+                        }
+                    } catch (Exception e1) {
+                        // e1.printStackTrace();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    // Mohist end
 
     @Override
     protected Class<?> findClass(final String name) throws ClassNotFoundException {
